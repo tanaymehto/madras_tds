@@ -19,13 +19,22 @@ app.add_middleware(
 class CodeRequest(BaseModel):
     code: str
 
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
+@app.get("/healthz")
+def healthz():
+    return {"ok": True}
+
 def execute_python_code(code: str):
     old_stdout = sys.stdout
-    sys.stdout = StringIO()
+    captured = StringIO()
+    sys.stdout = captured
 
     try:
         exec(code)
-        output = sys.stdout.getvalue()
+        output = captured.getvalue()
         return {"success": True, "output": output}
     except Exception:
         return {"success": False, "output": traceback.format_exc()}
@@ -37,15 +46,17 @@ def code_interpreter(req: CodeRequest):
     result = execute_python_code(req.code)
 
     if result["success"]:
-        return {"error": [], "result": result["output"]}
+        return {
+            "error": [],
+            "result": result["output"]
+        }
 
     tb = result["output"]
 
-    lines = []
-    for m in re.finditer(r'line (\d+)', tb):
-        lines.append(int(m.group(1)))
+    # Only extract line numbers from the user's code
+    matches = re.findall(r'File "<string>", line (\d+)', tb)
 
     return {
-        "error": sorted(list(set(lines))),
+        "error": [int(matches[-1])] if matches else [],
         "result": tb
     }
