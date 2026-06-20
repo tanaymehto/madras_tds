@@ -37,10 +37,7 @@ def code_interpreter(req: CodeRequest):
     result = execute_python_code(req.code)
 
     if result["success"]:
-        return {
-            "error": [],
-            "result": result["output"]
-        }
+        return {"error": [], "result": result["output"]}
 
     tb = result["output"]
 
